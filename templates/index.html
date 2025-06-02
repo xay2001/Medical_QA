@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医疗知识问答系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: 500px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            max-width: 80%;
+        }
+        
+        .user-message {
+            margin-left: auto;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 15px 15px 5px 15px;
+        }
+        
+        .bot-message {
+            margin-right: auto;
+            background-color: white;
+            border: 1px solid #dee2e6;
+            padding: 10px 15px;
+            border-radius: 15px 15px 15px 5px;
+        }
+        
+        .feature-card {
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background-color: #f8f9fa;
+            transition: border-color 0.3s;
+        }
+        
+        .upload-area.drag-over {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+        }
+        
+        .section-title {
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .loading {
+            display: none;
+        }
+        
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-transparent shadow-sm">
+        <div class="container">
+            <a class="navbar-brand text-primary" href="/">
+                <i class="bi bi-heart-pulse"></i> 医疗知识问答系统
+            </a>
+            <button class="navbar-toggler border-primary" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active text-primary fw-bold" href="/">
+                            <i class="bi bi-house-door"></i> 首页
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-info" href="/dashboard/">
+                            <i class="bi bi-speedometer2"></i> 系统监控
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 系统介绍 -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <h4><i class="bi bi-info-circle"></i> 系统介绍</h4>
+                    <p class="mb-0">
+                        本系统基于丁香医生数据提供智能医疗问答服务，支持文本问答、图像识别、文档分析和文本挖掘功能。
+                        <strong>注意：本系统提供的信息仅供参考，不能替代专业医疗诊断。</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 聊天功能 -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <h2 class="section-title"><i class="bi bi-chat-dots"></i> 智能问答</h2>
+                
+                <!-- 聊天窗口 -->
+                <div class="chat-container" id="chatContainer">
+                    <div class="message bot-message">
+                        <strong>医疗助手：</strong>您好！我是您的医疗健康助手。您可以：<br>
+                        1. 输入文字问题进行咨询<br>
+                        2. 上传医疗图像进行分析<br>
+                        3. 上传文档进行处理和分析<br>
+                        请问有什么可以帮助您的吗？
+                    </div>
+                </div>
+                
+                <!-- 输入区域 -->
+                <div class="mt-3">
+                    <div class="row">
+                        <div class="col-md-9">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="questionInput" 
+                                       placeholder="请输入您的问题..." onkeypress="handleKeyPress(event)">
+                                <button class="btn btn-primary" type="button" onclick="sendTextMessage()">
+                                    <span class="loading spinner-border spinner-border-sm" role="status"></span>
+                                    发送
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="file" class="form-control" id="imageInput" accept="image/*" 
+                                   onchange="sendImageMessage()" style="display: none;">
+                            <button class="btn btn-outline-primary w-100" onclick="document.getElementById('imageInput').click()">
+                                <i class="bi bi-image"></i> 上传图像
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能选项卡 -->
+        <ul class="nav nav-tabs" id="featureTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="document-tab" data-bs-toggle="tab" data-bs-target="#document" 
+                        type="button" role="tab">
+                    <i class="bi bi-file-earmark-text"></i> 文档处理与分析
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="image-recognition-tab" data-bs-toggle="tab" data-bs-target="#image-recognition" 
+                        type="button" role="tab">
+                    <i class="bi bi-eye"></i> 图像识别
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="mining-tab" data-bs-toggle="tab" data-bs-target="#mining" 
+                        type="button" role="tab">
+                    <i class="bi bi-graph-up"></i> 文本挖掘
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="crawler-tab" data-bs-toggle="tab" data-bs-target="#crawler" 
+                        type="button" role="tab">
+                    <i class="bi bi-download"></i> 数据爬取与管理
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="featureTabsContent">
+            <!-- 文档处理 -->
+            <div class="tab-pane fade show active" id="document" role="tabpanel">
+                <div class="mt-4">
+                    <h4><i class="bi bi-file-earmark-text"></i> 文档处理与分析</h4>
+                    <p class="text-muted">上传文档进行词性标注、实体识别和摘要生成</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="upload-area" id="documentUploadArea">
+                                <i class="bi bi-cloud-upload fs-1 text-muted"></i>
+                                <h5 class="mt-3">拖拽文档到此处或点击上传</h5>
+                                <p class="text-muted">支持 .txt, .pdf, .docx 格式</p>
+                                <input type="file" id="documentInput" accept=".txt,.pdf,.docx" style="display: none;">
+                                <button class="btn btn-outline-primary" id="documentUploadButton">
+                                    选择文件
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div id="documentAnalysisResult" class="d-none">
+                                <h6>分析结果：</h6>
+                                <div class="accordion" id="analysisAccordion">
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                                    data-bs-target="#posTagsCollapse">
+                                                词性标注结果
+                                            </button>
+                                        </h2>
+                                        <div id="posTagsCollapse" class="accordion-collapse collapse show">
+                                            <div class="accordion-body" id="posTagsResult"></div>
+                                        </div>
+                                    </div>
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                    data-bs-target="#entitiesCollapse">
+                                                实体识别结果
+                                            </button>
+                                        </h2>
+                                        <div id="entitiesCollapse" class="accordion-collapse collapse">
+                                            <div class="accordion-body" id="entitiesResult"></div>
+                                        </div>
+                                    </div>
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                    data-bs-target="#summaryCollapse">
+                                                文档摘要
+                                            </button>
+                                        </h2>
+                                        <div id="summaryCollapse" class="accordion-collapse collapse">
+                                            <div class="accordion-body" id="summaryResult"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-success mt-3" onclick="downloadAnalysisResult()">
+                                    <i class="bi bi-download"></i> 下载结果
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图像识别 -->
+            <div class="tab-pane fade" id="image-recognition" role="tabpanel">
+                <div class="mt-4">
+                    <h4><i class="bi bi-eye"></i> 图像识别</h4>
+                    <p class="text-muted">上传图像进行疾病识别和症状分析</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="upload-area" id="imageRecognitionUploadArea">
+                                <i class="bi bi-cloud-upload fs-1 text-muted"></i>
+                                <h5 class="mt-3">拖拽图像到此处或点击上传</h5>
+                                <p class="text-muted">支持 .jpg, .png 格式</p>
+                                <input type="file" id="imageRecognitionInput" accept=".jpg,.png" style="display: none;">
+                                <button class="btn btn-outline-primary" id="imageRecognitionUploadButton">
+                                    <i class="bi bi-image"></i> 上传图像
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div id="imageRecognitionResult" class="d-none">
+                                <h6>识别结果：</h6>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">疾病识别</h6>
+                                        <div id="diseaseRecognitionResult"></div>
+                                    </div>
+                                </div>
+                                <div class="card mt-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title">症状分析</h6>
+                                        <div id="symptomAnalysisResult"></div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-success mt-3" onclick="downloadImageRecognitionResult()">
+                                    <i class="bi bi-download"></i> 下载结果
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文本挖掘 -->
+            <div class="tab-pane fade" id="mining" role="tabpanel">
+                <div class="mt-4">
+                    <h4><i class="bi bi-graph-up"></i> 文本挖掘</h4>
+                    <p class="text-muted">上传数据集进行文本聚类和词云分析</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="upload-area" id="datasetUploadArea">
+                                <i class="bi bi-archive fs-1 text-muted"></i>
+                                <h5 class="mt-3">上传数据集压缩包</h5>
+                                <p class="text-muted">支持 .zip, .rar 格式</p>
+                                <input type="file" id="datasetInput" accept=".zip,.rar" style="display: none;">
+                                <button class="btn btn-outline-primary" id="datasetUploadButton">
+                                    选择文件
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div id="miningResult" class="d-none">
+                                <h6>挖掘结果：</h6>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">t-SNE 聚类可视化</h6>
+                                        <div id="tsneChart"></div>
+                                    </div>
+                                </div>
+                                <div class="card mt-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title">词云图</h6>
+                                        <div id="wordcloudImages"></div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-success mt-3" onclick="downloadMiningResult()">
+                                    <i class="bi bi-download"></i> 下载结果
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据爬取 -->
+            <div class="tab-pane fade" id="crawler" role="tabpanel">
+                <div class="mt-4">
+                    <h4><i class="bi bi-download"></i> 数据爬取与管理</h4>
+                    <p class="text-muted">从丁香医生等平台爬取医疗问答数据，并进行数据处理</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">数据爬取</h6>
+                                    <div class="mb-3">
+                                        <label for="targetCount" class="form-label">目标数据量：</label>
+                                        <input type="number" class="form-control" id="targetCount" value="1000" min="1" max="10000">
+                                    </div>
+                                    <button class="btn btn-primary" onclick="startCrawler()">
+                                        <span class="loading spinner-border spinner-border-sm" role="status"></span>
+                                        开始爬取
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">数据处理</h6>
+                                    <p class="text-muted mb-3">对爬取的数据进行分词、关键词提取等预处理</p>
+                                    <button class="btn btn-success" onclick="processData()">
+                                        <span class="loading-process spinner-border spinner-border-sm" role="status" style="display: none;"></span>
+                                        <i class="bi bi-gear"></i> 处理数据
+                                    </button>
+                                    <button class="btn btn-info ms-2" onclick="getDataStats()">
+                                        <i class="bi bi-bar-chart"></i> 数据统计
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-body">
+                                    <h6 class="card-title text-danger">危险操作</h6>
+                                    <p class="text-muted mb-3">清除所有爬取的问答数据（不可恢复）</p>
+                                    <button class="btn btn-danger" onclick="clearAllData()">
+                                        <span class="loading-clear spinner-border spinner-border-sm" role="status" style="display: none;"></span>
+                                        <i class="bi bi-trash"></i> 清除所有数据
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div id="crawlerLog">
+                                <h6>操作日志：</h6>
+                                <div class="alert alert-light" id="crawlerLogContent">
+                                    等待操作...
+                                </div>
+                            </div>
+                            
+                            <div id="dataStatsResult" class="d-none mt-3">
+                                <h6>数据统计：</h6>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div id="dataStatsContent">
+                                            <!-- 统计信息将在这里显示 -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="processResult" class="d-none mt-3">
+                                <h6>处理结果：</h6>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div id="processResultContent">
+                                            <!-- 处理结果将在这里显示 -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // 全局变量
+        let sessionId = null;
+        let currentDocumentId = null;
+        
+        // 文本挖掘相关功能
+        let miningCurrentResult = null;
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化文件上传区域
+            initializeFileUpload();
+        });
+        
+        // 处理回车键发送消息
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendTextMessage();
+            }
+        }
+        
+        // 发送文本消息
+        async function sendTextMessage() {
+            const input = document.getElementById('questionInput');
+            const question = input.value.trim();
+            
+            if (!question) {
+                alert('请输入问题');
+                return;
+            }
+            
+            // 显示加载状态
+            const button = event.target;
+            const loading = button.querySelector('.loading');
+            loading.style.display = 'inline-block';
+            button.disabled = true;
+            
+            // 添加用户消息到聊天容器
+            addMessageToChat('user', question);
+            input.value = '';
+            
+            try {
+                const response = await fetch('/chat/text/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        session_id: sessionId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    sessionId = data.session_id;
+                    addMessageToChat('bot', data.answer);
+                } else {
+                    addMessageToChat('bot', '抱歉，处理您的问题时出现错误：' + (data.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('发送消息错误:', error);
+                addMessageToChat('bot', '网络错误，请稍后重试。');
+            } finally {
+                // 隐藏加载状态
+                loading.style.display = 'none';
+                button.disabled = false;
+            }
+        }
+        
+        // 发送图像消息
+        async function sendImageMessage() {
+            const input = document.getElementById('imageInput');
+            const file = input.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('session_id', sessionId || '');
+            formData.append('question', '请分析这张图片');
+            
+            // 添加用户消息到聊天容器
+            addMessageToChat('user', '用户上传了一张图片', URL.createObjectURL(file));
+            
+            try {
+                const response = await fetch('/chat/image/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    sessionId = data.session_id;
+                    addMessageToChat('bot', data.answer);
+                } else {
+                    addMessageToChat('bot', '抱歉，处理图片时出现错误：' + (data.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('发送图片错误:', error);
+                addMessageToChat('bot', '网络错误，请稍后重试。');
+            }
+            
+            // 清空文件输入
+            input.value = '';
+        }
+        
+        // 添加消息到聊天容器
+        function addMessageToChat(sender, content, imageUrl = null) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            let messageHTML = '';
+            if (sender === 'user') {
+                messageHTML = `<strong>您：</strong>`;
+            } else {
+                messageHTML = `<strong>医疗助手：</strong>`;
+            }
+            
+            if (imageUrl) {
+                messageHTML += `<br><img src="${imageUrl}" alt="上传的图片" style="max-width: 200px; max-height: 200px; border-radius: 10px;">`;
+            }
+            
+            messageHTML += `<br>${content.replace(/\n/g, '<br>')}`;
+            messageDiv.innerHTML = messageHTML;
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // 初始化文件上传
+        function initializeFileUpload() {
+            // 文档上传
+            const documentInput = document.getElementById('documentInput');
+            const documentUploadArea = document.getElementById('documentUploadArea');
+            const documentUploadButton = document.getElementById('documentUploadButton');
+            
+            documentInput.addEventListener('change', uploadDocument);
+            
+            // 按钮点击事件
+            documentUploadButton.addEventListener('click', (e) => {
+                e.stopPropagation(); // 阻止事件冒泡
+                documentInput.click();
+            });
+            
+            // 上传区域点击事件（排除按钮区域）
+            documentUploadArea.addEventListener('click', (e) => {
+                // 如果点击的是按钮或按钮内部元素，不处理
+                if (e.target === documentUploadButton || documentUploadButton.contains(e.target)) {
+                    return;
+                }
+                documentInput.click();
+            });
+            
+            // 拖拽事件
+            documentUploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                highlightDocument(e);
+            });
+            documentUploadArea.addEventListener('dragleave', unhighlightDocument);
+            documentUploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                unhighlightDocument(e);
+                handleDocumentDrop(e);
+            });
+            
+            // 数据集上传
+            const datasetInput = document.getElementById('datasetInput');
+            const datasetUploadArea = document.getElementById('datasetUploadArea');
+            const datasetUploadButton = document.getElementById('datasetUploadButton');
+            
+            if (datasetInput && datasetUploadArea && datasetUploadButton) {
+                datasetInput.addEventListener('change', uploadDataset);
+                
+                // 按钮点击事件
+                datasetUploadButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    datasetInput.click();
+                });
+                
+                // 上传区域点击事件
+                datasetUploadArea.addEventListener('click', (e) => {
+                    if (e.target === datasetUploadButton || datasetUploadButton.contains(e.target)) {
+                        return;
+                    }
+                    datasetInput.click();
+                });
+                
+                // 拖拽事件
+                datasetUploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    highlightDataset(e);
+                });
+                datasetUploadArea.addEventListener('dragleave', unhighlightDataset);
+                datasetUploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    unhighlightDataset(e);
+                    handleDatasetDrop(e);
+                });
+            }
+            
+            // 图像识别上传
+            const imageRecognitionInput = document.getElementById('imageRecognitionInput');
+            const imageRecognitionUploadArea = document.getElementById('imageRecognitionUploadArea');
+            const imageRecognitionUploadButton = document.getElementById('imageRecognitionUploadButton');
+            
+            if (imageRecognitionInput && imageRecognitionUploadArea && imageRecognitionUploadButton) {
+                imageRecognitionInput.addEventListener('change', uploadMedicalImage);
+                
+                // 按钮点击事件
+                imageRecognitionUploadButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    imageRecognitionInput.click();
+                });
+                
+                // 上传区域点击事件
+                imageRecognitionUploadArea.addEventListener('click', (e) => {
+                    if (e.target === imageRecognitionUploadButton || imageRecognitionUploadButton.contains(e.target)) {
+                        return;
+                    }
+                    imageRecognitionInput.click();
+                });
+                
+                // 拖拽事件
+                imageRecognitionUploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    highlightImageRecognition(e);
+                });
+                imageRecognitionUploadArea.addEventListener('dragleave', unhighlightImageRecognition);
+                imageRecognitionUploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    unhighlightImageRecognition(e);
+                    handleImageRecognitionDrop(e);
+                });
+            }
+        }
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        // 文档上传相关函数
+        function highlightDocument(e) {
+            document.getElementById('documentUploadArea').classList.add('drag-over');
+        }
+        
+        function unhighlightDocument(e) {
+            document.getElementById('documentUploadArea').classList.remove('drag-over');
+        }
+        
+        function highlight(e) {
+            document.getElementById('documentUploadArea').classList.add('drag-over');
+        }
+        
+        function unhighlight(e) {
+            document.getElementById('documentUploadArea').classList.remove('drag-over');
+        }
+        
+        function handleDocumentDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                document.getElementById('documentInput').files = files;
+                uploadDocument();
+            }
+        }
+        
+        // 上传文档
+        async function uploadDocument() {
+            const input = document.getElementById('documentInput');
+            const file = input.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('document', file);
+            formData.append('title', file.name);
+            
+            try {
+                const response = await fetch('/document/upload/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentDocumentId = data.document_id;
+                    displayAnalysisResult(data.analysis);
+                    alert('文档上传并分析完成！');
+                } else {
+                    alert('文档上传失败：' + (data.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('文档上传错误:', error);
+                alert('网络错误，请稍后重试。');
+            }
+        }
+        
+        // 显示分析结果
+        function displayAnalysisResult(analysis) {
+            const resultDiv = document.getElementById('documentAnalysisResult');
+            resultDiv.classList.remove('d-none');
+            
+            // 显示词性标注结果
+            const posTagsDiv = document.getElementById('posTagsResult');
+            posTagsDiv.innerHTML = analysis.pos_tags ? analysis.pos_tags.join(', ') : '无';
+            
+            // 显示实体识别结果
+            const entitiesDiv = document.getElementById('entitiesResult');
+            if (analysis.entities && Object.keys(analysis.entities).length > 0) {
+                let entitiesHTML = '';
+                for (const [category, entities] of Object.entries(analysis.entities)) {
+                    entitiesHTML += `<strong>${category}：</strong>${entities.join(', ')}<br>`;
+                }
+                entitiesDiv.innerHTML = entitiesHTML;
+            } else {
+                entitiesDiv.innerHTML = '未识别到医疗实体';
+            }
+            
+            // 显示文档摘要
+            const summaryDiv = document.getElementById('summaryResult');
+            summaryDiv.innerHTML = analysis.summary || '无摘要';
+        }
+        
+        // 下载分析结果
+        async function downloadAnalysisResult() {
+            if (!currentDocumentId) {
+                alert('请先上传并分析文档');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/document/download/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        document_id: currentDocumentId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 创建下载链接
+                    const blob = new Blob([data.content], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = data.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    alert('下载失败：' + (data.error || '未知错误'));
+                }
+            } catch (error) {
+                console.error('下载错误:', error);
+                alert('网络错误，请稍后重试。');
+            }
+        }
+        
+        // 启动爬虫
+        async function startCrawler() {
+            const targetCount = document.getElementById('targetCount').value;
+            const button = event.target;
+            const loading = button.querySelector('.loading');
+            const logDiv = document.getElementById('crawlerLogContent');
+            
+            loading.style.display = 'inline-block';
+            button.disabled = true;
+            
+            logDiv.innerHTML = '正在启动爬虫，请稍候...';
+            
+            try {
+                const response = await fetch('/crawler/start/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        target_count: parseInt(targetCount)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    logDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                } else {
+                    logDiv.innerHTML = `<div class="alert alert-danger">爬取失败：${data.error || '未知错误'}</div>`;
+                }
+            } catch (error) {
+                console.error('启动爬虫错误:', error);
+                logDiv.innerHTML = '<div class="alert alert-danger">网络错误，请稍后重试。</div>';
+            } finally {
+                loading.style.display = 'none';
+                button.disabled = false;
+            }
+        }
+        
+        // 处理数据
+        async function processData() {
+            const button = event.target;
+            const loading = button.querySelector('.loading-process');
+            const logDiv = document.getElementById('crawlerLogContent');
+            const resultDiv = document.getElementById('processResult');
+            const resultContent = document.getElementById('processResultContent');
+            
+            loading.style.display = 'inline-block';
+            button.disabled = true;
+            
+            logDiv.innerHTML = '正在处理数据，请稍候...';
+            resultDiv.classList.add('d-none');
+            
+            try {
+                const response = await fetch('/data/process/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    logDiv.innerHTML = `<div class="alert alert-success">数据处理完成！</div>`;
+                    
+                    // 显示处理结果
+                    resultContent.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>处理数据量：</strong> ${data.processed_count} 条</p>
+                                <p><strong>处理时间：</strong> ${data.process_time || '未知'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>索引构建：</strong> ${data.index_built ? '已完成' : '失败'}</p>
+                                <p><strong>索引文档数：</strong> ${data.index_documents || 0} 个</p>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <p><strong>处理状态：</strong> <span class="badge bg-success">成功</span></p>
+                        </div>
+                    `;
+                    resultDiv.classList.remove('d-none');
+                } else {
+                    logDiv.innerHTML = `<div class="alert alert-danger">数据处理失败：${data.error || '未知错误'}</div>`;
+                }
+            } catch (error) {
+                console.error('数据处理错误:', error);
+                logDiv.innerHTML = '<div class="alert alert-danger">网络错误，请稍后重试。</div>';
+            } finally {
+                loading.style.display = 'none';
+                button.disabled = false;
+            }
+        }
+        
+        // 获取数据统计
+        async function getDataStats() {
+            const logDiv = document.getElementById('crawlerLogContent');
+            const statsDiv = document.getElementById('dataStatsResult');
+            const statsContent = document.getElementById('dataStatsContent');
+            
+            logDiv.innerHTML = '正在获取数据统计...';
+            
+            try {
+                const response = await fetch('/data/stats/', {
+                    method: 'GET',
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    logDiv.innerHTML = `<div class="alert alert-info">数据统计获取完成</div>`;
+                    
+                    // 显示统计信息
+                    statsContent.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-primary">基础统计</h6>
+                                <p><strong>总数据量：</strong> ${data.total_qa} 条</p>
+                                <p><strong>已处理：</strong> ${data.processed_qa} 条</p>
+                                <p><strong>未处理：</strong> ${data.unprocessed_qa} 条</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-primary">分类统计</h6>
+                                <p><strong>医疗分类：</strong> ${data.categories ? Object.keys(data.categories).length : 0} 种</p>
+                                <p><strong>索引状态：</strong> ${data.index_ready ? '已构建' : '未构建'}</p>
+                                <p><strong>最后更新：</strong> ${data.last_updated || '未知'}</p>
+                            </div>
+                        </div>
+                        ${data.categories ? `
+                        <div class="mt-3">
+                            <h6 class="text-primary">分类详情</h6>
+                            ${Object.entries(data.categories).map(([category, count]) => 
+                                `<span class="badge bg-secondary me-2">${category}: ${count}</span>`
+                            ).join('')}
+                        </div>
+                        ` : ''}
+                    `;
+                    statsDiv.classList.remove('d-none');
+                } else {
+                    logDiv.innerHTML = `<div class="alert alert-danger">获取统计失败：${data.error || '未知错误'}</div>`;
+                }
+            } catch (error) {
+                console.error('获取统计错误:', error);
+                logDiv.innerHTML = '<div class="alert alert-danger">网络错误，请稍后重试。</div>';
+            }
+        }
+        
+        // 清除所有数据
+        async function clearAllData() {
+            // 确认操作
+            if (!confirm('确定要清除所有问答数据吗？此操作不可恢复！')) {
+                return;
+            }
+            
+            if (!confirm('请再次确认：这将删除所有爬取的医疗问答数据，确定继续吗？')) {
+                return;
+            }
+            
+            const button = event.target;
+            const loading = button.querySelector('.loading-clear');
+            const logDiv = document.getElementById('crawlerLogContent');
+            const statsDiv = document.getElementById('dataStatsResult');
+            const resultDiv = document.getElementById('processResult');
+            
+            loading.style.display = 'inline-block';
+            button.disabled = true;
+            
+            logDiv.innerHTML = '正在清除数据，请稍候...';
+            statsDiv.classList.add('d-none');
+            resultDiv.classList.add('d-none');
+            
+            try {
+                const response = await fetch('/data/clear/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    logDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            数据清除完成！
+                            <br>删除了 ${data.deleted_count} 条问答数据
+                            <br>删除了 ${data.deleted_sessions || 0} 个会话
+                            <br>删除了 ${data.deleted_messages || 0} 条消息
+                        </div>
+                    `;
+                } else {
+                    logDiv.innerHTML = `<div class="alert alert-danger">数据清除失败：${data.error || '未知错误'}</div>`;
+                }
+            } catch (error) {
+                console.error('数据清除错误:', error);
+                logDiv.innerHTML = '<div class="alert alert-danger">网络错误，请稍后重试。</div>';
+            } finally {
+                loading.style.display = 'none';
+                button.disabled = false;
+            }
+        }
+        
+        // 运行文本挖掘分析
+        function runTextMining() {
+            const method = document.getElementById('clusteringMethod').value;
+            const clusters = document.getElementById('clusterCount').value;
+            
+            showToast('开始分析...', 'info');
+            
+            fetch('/mining/run/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    clustering_method: method,
+                    n_clusters: parseInt(clusters)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showToast('分析失败：' + data.error, 'error');
+                } else {
+                    miningCurrentResult = data;
+                    displayMiningResult(data);
+                    showToast('分析完成！', 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('分析失败', 'error');
+            });
+        }
+        
+        // 显示挖掘结果
+        function displayMiningResult(data) {
+            const resultDiv = document.getElementById('miningResult');
+            resultDiv.classList.remove('d-none');
+            
+            // 显示t-SNE图
+            const tsneDiv = document.getElementById('tsneChart');
+            if (data.tsne_image) {
+                tsneDiv.innerHTML = `<img src="data:image/png;base64,${data.tsne_image}" class="img-fluid" alt="t-SNE可视化">`;
+            }
+            
+            // 显示词云图
+            const wordcloudDiv = document.getElementById('wordcloudImages');
+            if (data.wordclouds) {
+                let wordcloudHTML = '<div class="row">';
+                for (const [key, value] of Object.entries(data.wordclouds)) {
+                    wordcloudHTML += `
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">${key}</h6>
+                                    <img src="data:image/png;base64,${value}" class="img-fluid" alt="${key}词云图">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                wordcloudHTML += '</div>';
+                wordcloudDiv.innerHTML = wordcloudHTML;
+            }
+            
+            // 显示聚类信息
+            if (data.clustering_info) {
+                let clusterInfoHTML = '<div class="mt-3"><h6>聚类分析结果：</h6>';
+                for (const [clusterName, info] of Object.entries(data.clustering_info)) {
+                    clusterInfoHTML += `
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <h6 class="card-title">${clusterName} (${info.size} 条数据)</h6>
+                                <p class="card-text"><strong>关键词：</strong> ${info.keywords.join(', ')}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+                clusterInfoHTML += '</div>';
+                wordcloudDiv.innerHTML += clusterInfoHTML;
+            }
+        }
+        
+        // 下载挖掘结果
+        function downloadMiningResult() {
+            if (!miningCurrentResult) {
+                showToast('没有可下载的结果', 'warning');
+                return;
+            }
+            
+            // 创建下载内容
+            let content = `文本挖掘分析结果\n\n`;
+            content += `分析时间: ${new Date().toLocaleString()}\n`;
+            content += `总文本数: ${miningCurrentResult.summary.total_texts}\n`;
+            content += `聚类数: ${miningCurrentResult.summary.n_clusters}\n`;
+            content += `聚类方法: ${miningCurrentResult.summary.method}\n\n`;
+            
+            if (miningCurrentResult.clustering_info) {
+                content += `聚类详细信息:\n`;
+                for (const [clusterName, info] of Object.entries(miningCurrentResult.clustering_info)) {
+                    content += `\n${clusterName}:\n`;
+                    content += `  数据量: ${info.size}\n`;
+                    content += `  关键词: ${info.keywords.join(', ')}\n`;
+                }
+            }
+            
+            // 创建下载链接
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `文本挖掘结果_${new Date().getTime()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showToast('结果已下载', 'success');
+        }
+        
+        // 数据集上传相关函数
+        function highlightDataset(e) {
+            document.getElementById('datasetUploadArea').classList.add('drag-over');
+        }
+        
+        function unhighlightDataset(e) {
+            document.getElementById('datasetUploadArea').classList.remove('drag-over');
+        }
+        
+        function handleDatasetDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                document.getElementById('datasetInput').files = files;
+                uploadDataset();
+            }
+        }
+        
+        // 上传数据集
+        async function uploadDataset() {
+            const input = document.getElementById('datasetInput');
+            const file = input.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            // 检查文件类型
+            if (!file.name.toLowerCase().endsWith('.zip') && !file.name.toLowerCase().endsWith('.rar')) {
+                alert('请选择.zip或.rar格式的压缩文件！');
+                input.value = '';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('dataset', file);
+            formData.append('dataset_name', '医疗健康知识测试集');
+            formData.append('clustering_method', 'kmeans');
+            formData.append('n_clusters', 3);
+            
+            // 显示上传中状态
+            const uploadArea = document.getElementById('datasetUploadArea');
+            const originalContent = uploadArea.innerHTML;
+            uploadArea.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">处理中...</span>
+                    </div>
+                    <h5 class="mt-3">正在处理数据集...</h5>
+                    <p class="text-muted">请稍候，这可能需要几分钟时间</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/mining/upload/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 显示分析结果
+                    miningCurrentResult = data;
+                    displayMiningResult(data);
+                    showToast('数据集上传并分析完成！', 'success');
+                } else {
+                    showToast('数据集上传失败：' + (data.error || '未知错误'), 'error');
+                }
+            } catch (error) {
+                console.error('数据集上传错误:', error);
+                showToast('网络错误，请稍后重试。', 'error');
+            } finally {
+                // 恢复上传区域内容
+                uploadArea.innerHTML = originalContent;
+                
+                // 重新绑定事件监听器
+                reinitializeDatasetEvents();
+                
+                // 清空文件输入
+                input.value = '';
+            }
+        }
+        
+        // 重新绑定数据集事件监听器
+        function reinitializeDatasetEvents() {
+            const datasetInput = document.getElementById('datasetInput');
+            const datasetUploadArea = document.getElementById('datasetUploadArea');
+            const datasetUploadButton = document.getElementById('datasetUploadButton');
+            
+            if (datasetInput && datasetUploadArea && datasetUploadButton) {
+                // 按钮点击事件
+                datasetUploadButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    datasetInput.click();
+                });
+                
+                // 上传区域点击事件
+                datasetUploadArea.addEventListener('click', (e) => {
+                    if (e.target === datasetUploadButton || datasetUploadButton.contains(e.target)) {
+                        return;
+                    }
+                    datasetInput.click();
+                });
+                
+                // 拖拽事件
+                datasetUploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    highlightDataset(e);
+                });
+                datasetUploadArea.addEventListener('dragleave', unhighlightDataset);
+                datasetUploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    unhighlightDataset(e);
+                    handleDatasetDrop(e);
+                });
+            }
+        }
+        
+        // ==================== 图像识别相关函数 ====================
+        
+        // 图像识别上传相关函数
+        function highlightImageRecognition(e) {
+            document.getElementById('imageRecognitionUploadArea').classList.add('drag-over');
+        }
+        
+        function unhighlightImageRecognition(e) {
+            document.getElementById('imageRecognitionUploadArea').classList.remove('drag-over');
+        }
+        
+        function handleImageRecognitionDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                document.getElementById('imageRecognitionInput').files = files;
+                uploadMedicalImage();
+            }
+        }
+        
+        // 重新绑定图像识别事件监听器
+        function reinitializeImageRecognitionEvents() {
+            const imageRecognitionInput = document.getElementById('imageRecognitionInput');
+            const imageRecognitionUploadArea = document.getElementById('imageRecognitionUploadArea');
+            const imageRecognitionUploadButton = document.getElementById('imageRecognitionUploadButton');
+            
+            if (imageRecognitionInput && imageRecognitionUploadArea && imageRecognitionUploadButton) {
+                // 按钮点击事件
+                imageRecognitionUploadButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    imageRecognitionInput.click();
+                });
+                
+                // 上传区域点击事件
+                imageRecognitionUploadArea.addEventListener('click', (e) => {
+                    if (e.target === imageRecognitionUploadButton || imageRecognitionUploadButton.contains(e.target)) {
+                        return;
+                    }
+                    imageRecognitionInput.click();
+                });
+                
+                // 拖拽事件
+                imageRecognitionUploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    highlightImageRecognition(e);
+                });
+                imageRecognitionUploadArea.addEventListener('dragleave', unhighlightImageRecognition);
+                imageRecognitionUploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    unhighlightImageRecognition(e);
+                    handleImageRecognitionDrop(e);
+                });
+            }
+        }
+        
+        // 上传医学图像进行识别
+        async function uploadMedicalImage() {
+            const input = document.getElementById('imageRecognitionInput');
+            const file = input.files[0];
+            
+            if (!file) {
+                return;
+            }
+            
+            // 检查文件类型
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp', 'image/tiff'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('请选择支持的图像格式：JPEG、PNG、BMP、TIFF');
+                input.value = '';
+                return;
+            }
+            
+            // 检查文件大小
+            if (file.size > 10 * 1024 * 1024) {
+                alert('图像文件大小不能超过10MB');
+                input.value = '';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('image_name', file.name);
+            
+            // 显示上传中状态
+            const uploadArea = document.getElementById('imageRecognitionUploadArea');
+            const originalContent = uploadArea.innerHTML;
+            uploadArea.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">识别中...</span>
+                    </div>
+                    <h5 class="mt-3">正在识别图像...</h5>
+                    <p class="text-muted">请稍候，正在进行OCR文字识别和医学分析</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/image/upload/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // 显示识别结果
+                    displayImageRecognitionResult(data);
+                    showToast('图像识别完成！', 'success');
+                } else {
+                    const errorMsg = data.error || '图像识别失败';
+                    alert('图像识别失败：' + errorMsg);
+                }
+            } catch (error) {
+                console.error('图像识别错误:', error);
+                alert('网络错误，请稍后重试。');
+            } finally {
+                // 恢复上传区域内容
+                uploadArea.innerHTML = originalContent;
+                
+                // 重新绑定事件监听器
+                reinitializeImageRecognitionEvents();
+                
+                // 清空文件输入
+                input.value = '';
+            }
+        }
+        
+        // 显示图像识别结果
+        function displayImageRecognitionResult(data) {
+            const resultDiv = document.getElementById('imageRecognitionResult');
+            const diseaseDiv = document.getElementById('diseaseRecognitionResult');
+            const symptomDiv = document.getElementById('symptomAnalysisResult');
+            
+            resultDiv.classList.remove('d-none');
+            
+            // 显示识别的文本
+            let diseaseContent = `
+                <div class="mb-3">
+                    <h6 class="text-primary">识别文本</h6>
+                    <div class="border p-2 bg-light">
+                        ${data.extracted_text || '未识别到文本内容'}
+                    </div>
+                </div>
+            `;
+            
+            // 显示识别统计
+            diseaseContent += `
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="h4 text-primary">${data.total_detections || 0}</div>
+                            <div class="text-muted">检测文本块</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="h4 text-success">${data.confidence_score || 0}</div>
+                            <div class="text-muted">平均置信度</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <div class="h4 text-info">${data.processing_time || 0}s</div>
+                            <div class="text-muted">处理时间</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            diseaseDiv.innerHTML = diseaseContent;
+            
+            // 显示医学分析结果
+            if (data.analysis) {
+                let symptomContent = `
+                    <div class="mb-3">
+                        <h6 class="text-primary">分析摘要</h6>
+                        <p>${data.analysis.analysis || '暂无分析结果'}</p>
+                    </div>
+                `;
+                
+                // 显示关键词
+                if (data.analysis.keywords && data.analysis.keywords.length > 0) {
+                    symptomContent += `
+                        <div class="mb-3">
+                            <h6 class="text-primary">关键词</h6>
+                            <div>
+                                ${data.analysis.keywords.map(keyword => 
+                                    `<span class="badge bg-secondary me-1">${keyword}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // 显示医学实体
+                if (data.analysis.medical_entities && data.analysis.medical_entities.length > 0) {
+                    symptomContent += `
+                        <div class="mb-3">
+                            <h6 class="text-primary">医学实体</h6>
+                    `;
+                    
+                    data.analysis.medical_entities.forEach(entity => {
+                        symptomContent += `
+                            <div class="mb-2">
+                                <strong>${entity.category}：</strong>
+                                ${entity.entities.map(e => `<span class="badge bg-info me-1">${e}</span>`).join('')}
+                            </div>
+                        `;
+                    });
+                    
+                    symptomContent += `</div>`;
+                }
+                
+                // 显示建议
+                if (data.analysis.suggestions && data.analysis.suggestions.length > 0) {
+                    symptomContent += `
+                        <div class="mb-3">
+                            <h6 class="text-primary">医疗建议</h6>
+                            <ul class="list-unstyled">
+                                ${data.analysis.suggestions.map(suggestion => 
+                                    `<li class="mb-1"><i class="bi bi-check-circle text-success"></i> ${suggestion}</li>`
+                                ).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+                
+                symptomDiv.innerHTML = symptomContent;
+            } else {
+                symptomDiv.innerHTML = '<p class="text-muted">暂无医学分析结果</p>';
+            }
+            
+            // 保存当前结果用于下载
+            window.currentImageRecognitionResult = data;
+        }
+        
+        // 下载图像识别结果
+        function downloadImageRecognitionResult() {
+            if (!window.currentImageRecognitionResult) {
+                showToast('没有可下载的结果', 'warning');
+                return;
+            }
+            
+            const data = window.currentImageRecognitionResult;
+            
+            // 创建下载内容
+            let content = `医学图像识别结果\n\n`;
+            content += `识别时间: ${new Date().toLocaleString()}\n`;
+            content += `处理时间: ${data.processing_time || 0} 秒\n`;
+            content += `置信度: ${data.confidence_score || 0}\n`;
+            content += `检测文本块: ${data.total_detections || 0}\n\n`;
+            
+            content += `识别文本:\n${data.extracted_text || '无'}\n\n`;
+            
+            if (data.analysis) {
+                content += `分析结果:\n${data.analysis.analysis || '无'}\n\n`;
+                
+                if (data.analysis.keywords && data.analysis.keywords.length > 0) {
+                    content += `关键词: ${data.analysis.keywords.join(', ')}\n\n`;
+                }
+                
+                if (data.analysis.medical_entities && data.analysis.medical_entities.length > 0) {
+                    content += `医学实体:\n`;
+                    data.analysis.medical_entities.forEach(entity => {
+                        content += `  ${entity.category}: ${entity.entities.join(', ')}\n`;
+                    });
+                    content += `\n`;
+                }
+                
+                if (data.analysis.suggestions && data.analysis.suggestions.length > 0) {
+                    content += `医疗建议:\n`;
+                    data.analysis.suggestions.forEach(suggestion => {
+                        content += `  - ${suggestion}\n`;
+                    });
+                }
+            }
+            
+            // 创建下载链接
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `图像识别结果_${new Date().getTime()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showToast('结果已下载', 'success');
+        }
+        
+        // Toast通知函数
+        function showToast(message, type = 'info') {
+            // 创建toast容器（如果不存在）
+            let toastContainer = document.getElementById('toastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toastContainer';
+                toastContainer.className = 'position-fixed top-0 end-0 p-3';
+                toastContainer.style.zIndex = '1055';
+                document.body.appendChild(toastContainer);
+            }
+            
+            // 创建toast元素
+            const toastId = 'toast_' + Date.now();
+            const toastHTML = `
+                <div class="toast align-items-center text-white bg-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'primary'} border-0" 
+                     id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+            
+            // 显示toast
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: 3000
+            });
+            toast.show();
+            
+            // 移除已隐藏的toast
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+    </script>
+</body>
+</html>
