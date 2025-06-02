@@ -41,8 +41,8 @@ ENV/
 .DS_Store
 
 # Project specific
-tests/images/
-tests/data/
+# tests/images/
+# tests/data/
 *.png
 *.jpg
 *.jpeg
