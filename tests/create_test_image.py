@@ -58,5 +58,5 @@ draw_multiline(draw, text, font, max_width=560, start_pos=(20, 20))
 
 # 保存图像
 os.makedirs('test_images', exist_ok=True)
-img.save('test_images/medical_report.png')
+img.save('images/medical_report.png')
 print("✅ 中文图像已生成：test_images/medical_report.png")
