@@ -31,6 +31,41 @@
 - 前端：Bootstrap 5.1
 - 数据库：SQLite3
 
+## 项目结构
+
+```
+medical_qa_system/
+├── backend/                 # Django项目配置
+├── qa_system/              # 主应用模块
+│   ├── models.py           # 数据模型
+│   ├── views.py           # 视图函数
+│   ├── urls.py            # URL路由
+│   └── migrations/        # 数据库迁移
+├── image_recognition/      # 图像识别模块
+│   └── medical_ocr.py     # OCR处理类
+├── text_mining/           # 文本挖掘模块
+│   └── text_mining_analyzer.py
+├── data_processing/       # 数据处理模块
+│   └── text_processor.py
+├── crawler/              # 数据爬取模块
+│   └── dingxiang_crawler.py
+├── templates/            # 前端模板
+│   ├── index.html       # 主页面
+│   └── dashboard.html   # 监控面板
+├── tests/               # 测试相关
+│   ├── test_api.py     # API测试
+│   ├── test_ocr.py     # OCR测试
+│   ├── test_new_features.py
+│   ├── create_test_image.py
+│   ├── create_medical_test_image.py
+│   ├── data/           # 测试数据
+│   └── images/         # 测试图片
+├── media/              # 上传文件存储
+├── manage.py           # Django管理脚本
+├── requirements.txt    # 项目依赖
+└── README.md          # 项目文档
+```
+
 ## 安装说明
 
 1. 克隆项目
